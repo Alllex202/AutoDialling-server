@@ -1,5 +1,6 @@
 const Excel = require('exceljs');
 const path = require('path');
+const {Entry} = require('../models');
 
 function parseTableToDB(file) {
     try {
@@ -27,16 +28,24 @@ function parseTableToDB(file) {
                         continue;
                     }
 
-                    // write in db
+                    const entry = new Entry(
+                        row.getCell(1).value,
+                        row.getCell(4).value,
+                        row.getCell(8).value,
+                        row.getCell(15).value,
+                        row.getCell(16).value,
+                        row.getCell(18).value,
+                        row.getCell(21).value,
+                    );
+                    console.log(`Запись ${i} из ${countRows}`);
+
+                    entry.add();
                 }
             });
-
-
     } catch (e) {
         console.log('Не удалось прочитать таблицу');
         console.log(e);
     }
 }
 
-parseTableToDB(path.join(__dirname, '..', '..', 'files', 'testWB.xlsx'));
-
+// parseTableToDB(path.join(__dirname, '..', '..', 'files', 'testWB.xlsx'));

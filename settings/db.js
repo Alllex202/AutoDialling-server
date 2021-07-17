@@ -1,13 +1,15 @@
 const mysql = require('mysql2');
 
-const connection = mysql.createConnection({
+// CHANGE CONFIGURATION IF NECESSARY
+const config = {
     host: 'localhost',
     port: 3306,
-    user: 'root',
+    user: 'ad',
     database: 'autodiallingdb',
-    password: 'Password123',
+    password: 'Pass_123',
+};
 
-});
+const connection = mysql.createConnection(config);
 
 connection.connect(err => {
     if (err) {

@@ -1,3 +1,7 @@
 const Entry = require('./entry');
+const Call = require('./call');
 
-module.exports = {Entry};
+module.exports = {
+    Call,
+    Entry,
+};

@@ -14,4 +14,3 @@
 // const {Entry} = require('./models');
 //
 // Entry.getAll();
-
