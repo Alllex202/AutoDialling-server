@@ -1,6 +1,6 @@
 const Excel = require('exceljs');
 const path = require('path');
-const {Entry} = require('../models');
+const {sequelize, entries: Entry, calls: Call} = require('../models');
 
 function parseTableToDB(file) {
     try {
@@ -24,22 +24,57 @@ function parseTableToDB(file) {
 
                 for (let i = 1; i <= countRows; i++) {
                     const row = ws.getRow(indexRowHeader + i);
-                    if (row.getCell(3).value === 'Удалена') {
-                        continue;
-                    }
 
-                    const entry = new Entry(
-                        row.getCell(1).value,
-                        row.getCell(4).value,
-                        row.getCell(8).value,
-                        row.getCell(15).value,
-                        row.getCell(16).value,
-                        row.getCell(18).value,
-                        row.getCell(21).value,
-                    );
-                    console.log(`Запись ${i} из ${countRows}`);
+                    // if (row.getCell(3).value === 'Удалена') {
+                    //     continue;
+                    // }
 
-                    entry.add();
+                    const entry = {
+                        officeAddress: row.getCell(1).value,
+                        deleted: row.getCell(3).value === 'Удалена',
+                        datetime: row.getCell(4).value,
+                        service: row.getCell(8).value,
+                        firstName: row.getCell(15).value,
+                        secondName: row.getCell(16).value,
+                        phoneNumber: row.getCell(18).value,
+                        identifier: row.getCell(21).value,
+                    };
+
+                    Entry
+                        .create(entry)
+                        .then(entry => {
+                            console.log(`Запись ${i} из ${countRows}`);
+                            console.log(`PHONE_NUMBER: ${entry.phoneNumber}`)
+                            if (entry.deleted || !entry.phoneNumber) {
+                                return;
+                            }
+                            Call
+                                .create({
+                                    entryId: entry.id,
+                                })
+                                .then(() => {
+                                    console.log(`Звонок ${i} из ${countRows}`);
+                                })
+                                .catch(err => {
+                                    console.log(`Ошибка звонка ${i}: ${err}`);
+                                });
+                        })
+                        .catch(err => {
+                            console.log(`Ошибка записи ${i}: ${err}`);
+                        });
+
+                    // const entry = new Entry(
+                    //     row.getCell(1).value,
+                    //     row.getCell(4).value,
+                    //     row.getCell(8).value,
+                    //     row.getCell(15).value,
+                    //     row.getCell(16).value,
+                    //     row.getCell(18).value,
+                    //     row.getCell(21).value,
+                    // );
+                    // console.log(`Запись ${i} из ${countRows}`);
+                    //
+                    // entry.add();
                 }
             });
     } catch (e) {
@@ -48,4 +83,14 @@ function parseTableToDB(file) {
     }
 }
 
-// parseTableToDB(path.join(__dirname, '..', '..', 'files', 'testWB.xlsx'));
+module.exports = parseTableToDB;
+
+sequelize
+    .sync()
+    .then(() => {
+        console.log('Good sync');
+        parseTableToDB(path.join(__dirname, '..', '..', 'files', 'testWB.xlsx'));
+    })
+    .catch(err => {
+        console.log(`Ошибка при синхронизации БД; ${err}`);
+    });
