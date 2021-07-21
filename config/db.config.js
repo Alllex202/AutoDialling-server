@@ -1,8 +1,8 @@
 module.exports = {
     host: 'localhost',
     port: 3306,
-    user: 'ad',
+    user: 'root',
     database: 'autodiallingdb',
     dialect: 'mysql',
-    password: 'Pass_123',
+    password: 'Password123',
 };

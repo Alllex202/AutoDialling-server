@@ -1,11 +1,3 @@
-// const Entry = require('./entry');
-// const Call = require('./call');
-//
-// module.exports = {
-//     Call,
-//     Entry,
-// };
-
 const Sequelize = require('sequelize');
 const dbConfig = require('../config/db.config');
 
@@ -15,7 +7,7 @@ const sequelize = new Sequelize(dbConfig.database, dbConfig.user, dbConfig.passw
     port: dbConfig.port,
     define: {
         timestamps: false,
-    }
+    },
 });
 
 const db = {};

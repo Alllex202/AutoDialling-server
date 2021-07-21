@@ -6,7 +6,7 @@ const {Op} = Sequelize;
 const columnsReport = [
     {header: 'Офис', key: 'officeAddress', width: 10},
     {header: 'Удалена клиентом', key: 'deleted', width: 10},
-    {header: 'Дата и время записи', key: 'datetime', width: 10, style: { numFmt: 'dd.mm.yyyy hh:mm' }},
+    {header: 'Дата и время записи', key: 'datetime', width: 10, style: {numFmt: 'dd.mm.yyyy hh:mm'}},
     {header: 'Услуга', key: 'service', width: 10},
     {header: 'Имя', key: 'firstName', width: 10},
     {header: 'Фамилия', key: 'secondName', width: 10},
@@ -18,7 +18,7 @@ const columnsReport = [
 const columnsDetailedInfo = [
     {header: 'Офис', key: 'officeAddress', width: 10},
     {header: 'Удалена клиентом', key: 'deleted', width: 10},
-    {header: 'Дата и время записи', key: 'datetime', width: 10, style: { numFmt: 'dd.mm.yyyy hh:mm' }},
+    {header: 'Дата и время записи', key: 'datetime', width: 10, style: {numFmt: 'dd.mm.yyyy hh:mm'}},
     {header: 'Услуга', key: 'service', width: 10},
     {header: 'Имя', key: 'firstName', width: 10},
     {header: 'Фамилия', key: 'secondName', width: 10},
@@ -30,34 +30,34 @@ const columnsDetailedInfo = [
 ];
 
 function exportTableReportFromDB(fromDate, toDate) {
-    try {
-        Entry
-            .findAll({
-                include: [{
-                    model: Call,
-                    attributes: [
-                        'callsCount',
-                        'result',
-                        'operatorConnection',
-                    ],
-                }],
-                where: {
-                    datetime: {
-                        [Op.gte]: fromDate,
-                        [Op.lte]: toDate,
-                    }
-                },
-            })
-            .then(entries => {
+    Entry
+        .findAll({
+            include: [{
+                model: Call,
+                attributes: [
+                    'callsCount',
+                    'result',
+                    'operatorConnection',
+                ],
+            }],
+            where: {
+                datetime: {
+                    [Op.gte]: fromDate,
+                    [Op.lte]: toDate,
+                }
+            },
+        })
+        .then(entries => {
+            try {
                 exportWorkbook(createReport(entries), 'export.xlsx');
-            })
-            .catch(err => {
-                console.log(`ERROR getting results for report: ${err}`);
-            });
-    } catch (e) {
-        console.log('Error getTableReportFromDB!');
-        console.log(e);
-    }
+            } catch (e) {
+                console.log('Error getTableReportFromDB!');
+                console.log(e);
+            }
+        })
+        .catch(err => {
+            console.log(`ERROR getting results for report: ${err}`);
+        });
 
     function createReport(entries) {
         const wb = new Excel.Workbook();
