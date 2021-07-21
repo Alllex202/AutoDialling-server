@@ -4,10 +4,10 @@ const voipConfig = require('../config/voip.config');
 const serverConfig = require('../config/server.config');
 
 const sounds = {
-    hello: `sound:http://${serverConfig.host}:${serverConfig.port}/hello`,
-    signal: `sound:http://${serverConfig.host}:${serverConfig.port}/signal`,
-    operator: `sound:http://${serverConfig.host}:${serverConfig.port}/operator`,
-    question: `sound:http://${serverConfig.host}:${serverConfig.port}/question`,
+    hello: `sound:http://${serverConfig.hostname}:${serverConfig.port}/hello`,
+    signal: `sound:http://${serverConfig.hostname}:${serverConfig.port}/signal`,
+    operator: `sound:http://${serverConfig.hostname}:${serverConfig.port}/operator`,
+    question: `sound:http://${serverConfig.hostname}:${serverConfig.port}/question`,
 };
 
 client.connect(voipConfig.host, voipConfig.user, voipConfig.password, clientLoaded);
