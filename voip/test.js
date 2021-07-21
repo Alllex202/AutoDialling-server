@@ -1,15 +1,16 @@
 const client = require('ari-client');
 // const util = require('util');
-const path = require('path');
+const voipConfig = require('../config/voip.config');
+const serverConfig = require('../config/server.config');
 
 const sounds = {
-    hello: 'sound:http://10.0.0.20:3000/hello',
-    signal: 'sound:http://10.0.0.20:3000/signal',
-    operator: 'sound:http://10.0.0.20:3000/operator',
-    question: 'sound:http://10.0.0.20:3000/question',
+    hello: `sound:http://${serverConfig.host}:${serverConfig.port}/hello`,
+    signal: `sound:http://${serverConfig.host}:${serverConfig.port}/signal`,
+    operator: `sound:http://${serverConfig.host}:${serverConfig.port}/operator`,
+    question: `sound:http://${serverConfig.host}:${serverConfig.port}/question`,
 };
 
-client.connect('http://10.0.0.14:8088/', 'test', 'test', clientLoaded);
+client.connect(voipConfig.host, voipConfig.user, voipConfig.password, clientLoaded);
 
 function clientLoaded(err, ari) {
     console.log(1)

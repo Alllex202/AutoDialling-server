@@ -1,8 +1,9 @@
 const express = require('express');
 const path = require('path');
+const {hostname, port} = require('./config/server.config');
 
-const port = process.env.PORT_AUTODIALLING || 3000;
-const hostname = '10.0.0.20';
+// const port = serverConfig.port;
+// const hostname = serverConfig.host;
 const app = express();
 
 // app.use(express.static(__dirname + 'sounds/'), (res, req) => {});
