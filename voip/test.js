@@ -2,6 +2,13 @@ const client = require('ari-client');
 // const util = require('util');
 const path = require('path');
 
+const sounds = {
+    hello: 'sound:http://10.0.0.20:3000/hello',
+    signal: 'sound:http://10.0.0.20:3000/signal',
+    operator: 'sound:http://10.0.0.20:3000/operator',
+    question: 'sound:http://10.0.0.20:3000/question',
+};
+
 client.connect('http://10.0.0.14:8088/', 'test', 'test', clientLoaded);
 
 function clientLoaded(err, ari) {
@@ -33,6 +40,7 @@ function clientLoaded(err, ari) {
         console.log('Трубку подняли');
         console.log(chan.id)
 
+        call(chan);
     });
     localChannel.on('StasisEnd', (event, chan) => {
         console.log('Трубку повесили');
@@ -43,43 +51,72 @@ function clientLoaded(err, ari) {
         ari.stop();
     });
 
+    function call(chan) {
+        setTimeout(() => {
+            play(chan, sounds.hello, () => {
+                setTimeout(() => {
+                    play(chan, `number:${10}`, () => {
+                        setTimeout(() => {
+                            play(chan, `number:${50}`, () => {
+                                setTimeout(() => {
+                                    play(chan, sounds.question, () => {
+                                        play(chan, sounds.signal, () => {
+                                            localChannel.on('ChannelDtmfReceived', (event, chan) => {
+                                                if (event.digit === '0' || '1') {
+                                                    if (event.digit === '0') {
+                                                        console.log('Клиент не придет!');
+                                                    } else if (event.digit === '1') {
+                                                        console.log('Клиент придет!');
+                                                    }
+                                                    localChannel.removeAllListeners('ChannelDtmfReceived');
+                                                    setTimeout(() => {
+                                                        play(chan, sounds.operator, () => {
+                                                            play(chan, sounds.signal, () => {
+                                                                localChannel.on('ChannelDtmfReceived', (event, chan) => {
+                                                                    if (event.digit === '1') {
+                                                                        console.log('Соединение с оператором!');
+                                                                        localChannel.removeAllListeners('ChannelDtmfReceived');
+                                                                        setTimeout(() => {
+                                                                            localChannel.hangup();
+                                                                        }, 300);
+                                                                    }
+                                                                });
+                                                            });
+                                                        });
+                                                    }, 300);
+                                                }
+                                            });
+                                        });
+                                    });
+                                }, 100);
+                            });
+                        }, 100);
+                    });
+                }, 300);
+            });
+        }, 1000);
+    }
 
-    localChannel.on('ChannelDtmfReceived', (event, chan) => {
-        console.log(`Нажата кнопка: ${event.digit}`);
-
-        const hello = 'sound:hello';
-        const web = 'sound:https://g711.org/ready/test-1626877025.g722';
-        const local = 'sound:http://10.0.0.2:3000/test';
-
-        if (event.digit === '1') {
-            play(chan, hello);
-        }
-        if (event.digit === '2') {
-            play(chan, web);
-        }
-        if (event.digit === '3') {
-            play(chan, local);
-        }
-
-        // chan.answer((err) => {
-        //     if (err){
-        //         throw err;
-        //     }
-        //     const path = 'sound:https://g711.org/ready/demo-congrats-1626869919.g722';
-        //     const hello = 'sound:hello';
-        //     // console.log(path)
-        //     play(chan, path);
-        // })
-    });
+    // localChannel.on('ChannelDtmfReceived', (event, chan) => {
+    //     console.log(`Нажата кнопка: ${event.digit}`);
+    //
+    //     const hello = 'sound:hello';
+    //     const web = 'sound:https://g711.org/ready/test-1626877025.g722';
+    //     const local = 'sound:http://10.0.0.20:3000/';
+    //
+    //     if (event.digit === '0') {
+    //         play(chan, hello);
+    //     }
+    //     if (event.digit === '7') {
+    //         play(chan, local + 7);
+    //     }
+    // });
 
     // Воспроизвести
     function play(channel, sound, callback) {
         const playback = ari.Playback();
 
         playback.on('PlaybackStarted', function (event, playback) {
-            if (callback) {
-                callback(null);
-            }
             console.log('PlaybackStarted')
         });
 
@@ -90,7 +127,7 @@ function clientLoaded(err, ari) {
             console.log('PlaybackFinished')
         });
 
-        channel.play({media: sound}, playback, function (err, playback) {
+        channel.play({media: sound, format: 'g722'}, playback, function (err, playback) {
             if (err) {
                 console.log(123)
                 throw err;
@@ -170,18 +207,3 @@ function clientLoaded(err, ari) {
 
     console.log(2)
 }
-
-// const channel = ari.Channel();
-// channel
-//     .originate({
-//         endpoint: 'PJSIP/1010',
-//         extension: 'PJSIP/2020',
-//         callerId: 'Test',
-//         timeout: 30,
-//     })
-//     .then(channel => {
-//         console.log(`channel: `, channel);
-//     })
-//     .catch(err => {
-//         console.log(`err: `, err);
-//     })
