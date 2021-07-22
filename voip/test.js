@@ -1,18 +1,29 @@
 const client = require('ari-client');
 // const util = require('util');
 const voipConfig = require('../config/voip.config');
-const serverConfig = require('../config/server.config');
-
-const sounds = {
-    hello: `sound:http://${serverConfig.hostname}:${serverConfig.port}/hello`,
-    signal: `sound:http://${serverConfig.hostname}:${serverConfig.port}/signal`,
-    operator: `sound:http://${serverConfig.hostname}:${serverConfig.port}/operator`,
-    question: `sound:http://${serverConfig.hostname}:${serverConfig.port}/question`,
-};
+const sounds = require('./sounds');
+const fs = require('fs');
 
 client.connect(voipConfig.host, voipConfig.user, voipConfig.password, clientLoaded);
 
+function tryExportRecordFile(err, ari) {
+    ari.recordings.getStoredFile(
+        {recordingName: 'testRecord1'},
+        function (err, binary) {
+            if (err) {
+                throw err;
+            }
+
+            try {
+            } catch (e) {
+                throw e;
+            }
+        }
+    );
+}
+
 function clientLoaded(err, ari) {
+    console.log(ari)
     console.log(1)
 
     let closing = false;
@@ -21,7 +32,7 @@ function clientLoaded(err, ari) {
         throw err;
     }
 
-    ari.start("externalMedia");
+    ari.start("test");
 
     // // Create a simple bridge that is controlled by ARI/Stasis
     // let bridge = ari.Bridge();
@@ -35,11 +46,12 @@ function clientLoaded(err, ari) {
     //     this.close();
     // });
 
-
     let localChannel = ari.Channel();
     localChannel.on('StasisStart', (event, chan) => {
         console.log('Трубку подняли');
         console.log(chan.id)
+
+        // recording(chan);
 
         call(chan);
     });
@@ -51,6 +63,40 @@ function clientLoaded(err, ari) {
         console.log('Соединение прервано');
         ari.stop();
     });
+
+    /*
+    beep (boolean) - Play beep when recording begins
+    channelId (string) - Channel's id
+    format (string) - Format to encode audio in
+    ifExists (string) - Action to take if a recording with the same name already exists.
+    maxDurationSeconds (int) - Maximum duration of the recording, in seconds. 0 for no limit
+    maxSilenceSeconds (int) - Maximum duration of silence, in seconds. 0 for no limit
+    name (string) - Recording's filename
+    terminateOn (string) - DTMF input to terminate recording
+     */
+
+    function recording(chan) {
+        setTimeout(() => {
+            play(chan, sounds.signal,
+                () => {
+                    ari.channels.record({
+                        channelId: chan.id,
+                        beep: true,
+                        format: 'wav',
+                        maxDurationSeconds: 5,
+                        name: `testRecord_${Date.now().toString()}`,
+                    }, (err, liveRecording) => {
+                        if (err) {
+                            console.log('errorRecord')
+                            throw err;
+                        }
+                        console.log('live recording')
+                        // console.log(liveRecording)
+                    });
+                }
+            );
+        }, 500);
+    }
 
     function call(chan) {
         setTimeout(() => {
@@ -115,37 +161,53 @@ function clientLoaded(err, ari) {
 
     // Воспроизвести
     function play(channel, sound, callback) {
-        const playback = ari.Playback();
+        // const playback = ari.Playback();
+        // console.log('playback');
+        // console.log(playback.id);
+        //
+        // playback.on('PlaybackStarted', function (event, playback) {
+        //     console.log('PlaybackStarted')
+        // });
+        //
+        // playback.on('PlaybackFinished', function (event, playback) {
+        //     if (callback) {
+        //         callback(null);
+        //     }
+        //     console.log('PlaybackFinished')
+        // });
 
-        playback.on('PlaybackStarted', function (event, playback) {
-            console.log('PlaybackStarted')
-        });
-
-        playback.on('PlaybackFinished', function (event, playback) {
-            if (callback) {
-                callback(null);
-            }
-            console.log('PlaybackFinished')
-        });
-
-        channel.play({media: sound, format: 'g722'}, playback, function (err, playback) {
+        channel.play({media: sound}, function (err, playback) {
             if (err) {
-                console.log(123)
+                // console.log(123)
                 throw err;
             }
-            console.log(sound);
+            playback.on('PlaybackStarted', function (event, playback) {
+                console.log('PlaybackStarted')
+            });
+
+            playback.on('PlaybackFinished', function (event, playback) {
+                if (callback) {
+                    callback(null);
+                }
+                console.log('PlaybackFinished')
+            });
+            // console.log(sound);
         });
     }
 
-    try {
-        localChannel.originate({
-            endpoint: 'PJSIP/1010',
-            app: "externalMedia",
-            callerId: 'Test',
-            channelId: '123',
-        });
-    } catch (error) {
-        close();
+    callToEndpoint(localChannel, 'PJSIP/1010', "test", 'Test');
+
+    function callToEndpoint(chan, endpoint, app, callerId) {
+        try {
+            chan.originate({
+                endpoint,
+                app,
+                callerId,
+                // channelId: '123',
+            });
+        } catch (error) {
+            close();
+        }
     }
 
     // // Now we create the External Media channel.
