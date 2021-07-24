@@ -1,223 +1,407 @@
+// 'use strict';
+
 const client = require('ari-client');
 const voipConfig = require('../config/voip.config');
 const sounds = require('./sounds');
-const speechToText = require('../speechToText');
+const {speechToTextFromBinaryToBool} = require('../speechToText');
 
 const app = "AutoDialling";
 const callerName = 'МФЦ';
 
+let ari;
+
+// connect()
+
+/**
+ *
+ * @returns {Promise<ari>}
+ */
+async function connect() {
+    ari = await client
+        .connect(voipConfig.host, voipConfig.user, voipConfig.password);
+    await ari.start(app);
+    return ari;
+    // .then(_ari => {
+    //     ari = _ari;
+    //     ari.start(app);
+    //     return ari;
+    // })
+    // .catch(err => {
+    //     throw err;
+    // });
+}
+
+/**
+ *
+ * @param number {string}
+ * @param hours {number}
+ * @param minutes {number}
+ * @returns {Promise<{result: boolean | null, operator: boolean | null}>}
+ */
 function callTo(number, hours = 10, minutes = 50) {
-    let ari;
+    return new Promise((resolve, reject) => {
+        let result = null;
+        let operator = null;
+        let isReturnedResult = false;
 
-    client
-        .connect(voipConfig.host, voipConfig.user, voipConfig.password)
-        .then(_ari => {
-            ari = _ari;
-            ari.start(app);
+        const channel = createChannel(ari);
 
-            const channel = createChannel(ari);
+        callToEndpoint(number, app, callerName);
 
-            callToEndpoint(channel, number, app, callerName);
-        })
-        .catch(err => {
-            // throw err;
-        });
+        function createChannel(ari) {
+            const channel = ari.Channel();
+            channel.on('StasisStart', stasisStart);
+            channel.on('StasisEnd', stasisEnd);
+            channel.on('ChannelDestroyed', channelDestroyed);
+            return channel;
+        }
 
-    function createChannel(ari) {
-        const channel = ari.Channel();
-        channel.on('StasisStart', stasisStart);
-        channel.on('StasisEnd', stasisEnd);
-        channel.on('ChannelDestroyed', channelDestroyed);
-        return channel;
-    }
+        function stasisStart(event, channel) {
+            console.log(`Трубку подняли - Channel id: ${channel.id}`);
 
-    function stasisStart(event, channel) {
-        console.log(`Трубку подняли - Channel id: ${channel.id}`);
+            runDialog();
+        }
 
-        startDialog(channel);
-    }
+        function stasisEnd(event, channel) {
+            console.log(`Разговор завершен - Channel id: ${channel.id}`);
 
-    function stasisEnd(event, channel) {
-        console.log(`Разговор завершен - Channel id: ${channel.id}`);
+            ari.channels.get({channelId: channel.id})
+                .then(channel => channel.hangup())
+                .catch(err => {
+                    // console.log(1, err);
+                });
 
-        channel.hangup();
-        ari.stop();
-    }
+            returnResult();
+        }
 
-    function channelDestroyed(event, channel) {
-        console.log(`Соединение прервано - Channel id: ${channel.id}`);
+        function channelDestroyed(event, channel) {
+            console.log(`Соединение прервано - Channel id: ${channel.id}`);
+            returnResult();
+        }
 
-        ari.stop();
-    }
-
-    function callToEndpoint(channel, endpoint, app, callerId) {
-        channel.originate({
-            endpoint,
-            app,
-            callerId,
-            // channelId: '123',
-        }, (err, channel) => {
-            console.log(`Пытаемся дозвониться до ${endpoint} из ${channel.id}`);
-            if (err) {
-                // throw err;
-            }
-        });
-    }
-
-    function play(channel, sound, callbackStarted, callbackFinished, delay = 0) {
-        setTimeout(() => {
-            channel.play({media: sound}, function (err, playback) {
+        function callToEndpoint(endpoint, app, callerId) {
+            channel.originate({
+                endpoint,
+                app,
+                callerId,
+                // channelId: '123',
+            }, (err, _) => {
+                console.log(`Пытаемся дозвониться до ${endpoint} из ${channel?.id}`);
                 if (err) {
-                    // throw err;
+                    console.log(`Неудалось дозвониться до ${endpoint} из ${channel?.id}`);
+                    returnResult();
                 }
-                playback.on('PlaybackStarted', function (event, playback) {
-                    console.log(`Началось воспроизведение звука: ${sound} - Channel Id ${channel.id}`);
-                    if (callbackStarted) {
-                        callbackStarted(playback);
-                    }
-                });
-
-                playback.on('PlaybackFinished', function (event, playback) {
-                    console.log(`Закончилось воспроизведение звука: ${sound} - Channel Id ${channel.id}`);
-                    if (callbackFinished) {
-                        callbackFinished(playback);
-                    }
-                });
             });
-        }, delay);
-    }
+        }
 
-    function recordingVoice(channel, beep, callbackStarted, callbackFinished, delay = 0) {
-        setTimeout(() => {
-            ari.channels.record({
-                channelId: channel.id,
-                beep,
-                format: 'wav',
-                maxDurationSeconds: 4,
-                name: `recordAnswer_${Date.now().toString()}_${getRandomInt(1000000, 9999999)}`,
-            }, (err, liveRecording) => {
-                if (err) {
-                    // throw err;
-                }
-                liveRecording.on('RecordingStarted', (event, recording) => {
-                    console.log(`Начало записи ответа - channel id: ${channel.id}, recordName: ${recording.name}`);
-                    if (callbackStarted) {
-                        callbackStarted(recording);
-                    }
-                });
-                liveRecording.on('RecordingFinished', (event, recording) => {
-                    console.log(`Окончание записи ответа - channel id: ${channel.id}, recordName: ${recording.name}`);
-                    if (callbackFinished) {
-                        callbackFinished(recording);
-                    }
-                });
+        /**
+         *
+         * @param sound {string}
+         * @param callbackStarted {Function | null}
+         * @param delay {?number}
+         * @returns {Promise<{playback}>}
+         */
+        async function play(sound, callbackStarted, delay = 0) {
+            return new Promise((resolve1, reject1) => {
+                setTimeout(() => {
+                    channel.play({media: sound}, function (err, playback) {
+                        if (err) {
+                            reject1(err);
+                        }
+                        if (!playback) {
+                            // reject1();
+                            return;
+                        }
+                        playback.on('PlaybackStarted', function (event, playback) {
+                            console.log(`Началось воспроизведение звука: ${sound} - Channel Id ${channel.id}`);
+                            if (callbackStarted) {
+                                callbackStarted(playback);
+                            }
+                        });
+
+                        playback.on('PlaybackFinished', function (event, playback) {
+                            console.log(`Закончилось воспроизведение звука: ${sound} - Channel Id ${channel.id}`);
+                            resolve1(playback);
+                        });
+                    });
+                }, delay);
+            })
+        }
+
+        /**
+         *
+         * @param beep {boolean}
+         * @param callbackStarted {Function | null}
+         * @param delay {number}
+         * @returns {Promise<{recording}>}
+         */
+        async function recordingVoice(beep, callbackStarted, delay = 0) {
+            return new Promise((resolve1, reject1) => {
+                setTimeout(() => {
+                    ari.channels.record({
+                        channelId: channel.id,
+                        beep,
+                        format: 'wav',
+                        maxDurationSeconds: 3,
+                        name: `recordAnswer_${Date.now().toString()}_${getRandomInt(1000000, 9999999)}`,
+                    }, (err, liveRecording) => {
+                        if (err) {
+                            reject1(err);
+                            // throw err;
+                        }
+                        if (!liveRecording) {
+                            reject1();
+                            return;
+                        }
+
+                        liveRecording.on('RecordingStarted', (event, recording) => {
+                            console.log(`Начало записи ответа - channel id: ${channel.id}, recordName: ${recording.name}`);
+                            if (callbackStarted) {
+                                callbackStarted(recording);
+                            }
+                        });
+                        liveRecording.on('RecordingFinished', (event, recording) => {
+                            console.log(`Окончание записи ответа - channel id: ${channel.id}, recordName: ${recording.name}`);
+                            resolve1(recording);
+
+                            // if (callbackFinished) {
+                            //     callbackFinished(recording);
+                            // }
+                        });
+                    });
+                }, delay);
             });
-        }, delay);
-    }
+        }
 
-    function recordingToText(recording, callbackTrue, callbackFalse, callbackNull) {
-        ari.recordings.getStoredFile(
-            {recordingName: recording.name},
-            function (err, binary) {
-                if (err) {
-                    // throw err;
-                }
-                console.log(`Пытаемся распознать речь - recordName: ${recording.name}`);
-                const result = speechToText(binary);
-                console.log(`Распознавание речи - recordName: ${recording.name}, result: ${result}`);
+        /**
+         *
+         * @param recording {'recording'}
+         * @returns {Promise<boolean | null>}
+         */
+        async function recordingToTextToBool(recording) {
+            return new Promise((resolve1, reject1) => {
+                ari.recordings.getStoredFile({recordingName: recording.name})
+                    .then(binary => {
+                        console.log(`Пытаемся распознать речь - recordName: ${recording.name}`);
+                        speechToTextFromBinaryToBool(binary)
+                            .then(result => {
+                                console.log(`Мы распознали речь - recordName: ${recording.name}, result: ${result}`);
+                                resolve1(result);
 
-                if (result === true) {
-                    if (callbackTrue) {
-                        callbackTrue(null);
-                    }
-                } else if (result === false) {
-                    if (callbackFalse) {
-                        callbackFalse(null);
-                    }
-                } else {
-                    if (callbackNull) {
-                        callbackNull(null);
-                    }
-                }
-            }
-        );
-    }
+                                // if (callback) {
+                                //     callback(result);
+                                // }
+                            })
+                            .catch(err => {
+                                // console.log(1, err)
+                                reject1(err);
+                            });
+                    })
+                    .catch(err => {
+                        // console.log(2, err)
+                        reject1(err);
+                    });
+            });
+        }
 
-    function startDialog(channel) {
-        play(channel, sounds.hello, null, () => {
-            play(channel, `number:${hours}`, null, () => {
-                play(channel, `number:${minutes}`, null, () => {
-                    play(channel, sounds.question, null, () => {
-                        recordingVoice(channel, true, null, (recording) => {
-                            recordingToText(
-                                recording,
-                                () => {
-                                    play(channel, 'sound:goodbye', null, () => {
-                                        console.log(`Программа заканчивает разговор (1) - channelId: ${channel.id}`);
-                                        channel.hangup((err) => {
-                                            if (err) {
-                                                // throw err;
-                                            }
-                                            console.log(`Здесь должно быть ари стоп (0)`);
-                                            ari.stop();
+        function runDialog() {
+            sayGreetingAndAskQuestionMeeting()
+                .then(() => {
+                    tryGetAnswer(
+                        () => {
+                            result = true;
+                            endingCall();
+                        },
+                        () => {
+                            result = false;
+                            askQuestionOperator()
+                                .then(() => {
+                                    tryGetAnswer(
+                                        () => {
+                                            operator = true;
+                                            transferToOperator();
+                                        },
+                                        () => {
+                                            operator = false;
+                                            endingCall();
                                         });
-                                        console.log(`Здесь должно быть ари стоп (1)`);
-                                        ari.stop();
-                                    }, 300);
-                                },
-                                () => {
-                                    play(channel, sounds.operator, null, () => {
-                                        recordingVoice(channel, true, null, (recording) => {
-                                            recordingToText(
-                                                recording,
-                                                () => {
-                                                    console.log(`Перевод на оператора - channelId: ${channel.id}`);
-                                                    play(channel, 'sound:hello-world', null, () => {
-                                                        console.log(`Типа ответил оператор - channelId: ${channel.id}`);
-                                                        channel.hangup((err) => {
-                                                            if (err) {
-                                                                // throw err;
-                                                            }
-                                                            console.log(`Здесь должно быть ари стоп (0.1)`);
-                                                            ari.stop();
-                                                        });
-                                                        console.log(`Здесь должно быть ари стоп (2)`);
-                                                        ari.stop();
-                                                    }, 300)
-                                                },
-                                                () => {
-                                                    play(channel, 'sounds:goodbye', null, () => {
-                                                        console.log(`Заканчиваем разговор (2) - channelId: ${channel.id}`);
-                                                        channel.hangup((err) => {
-                                                            if (err) {
-                                                                // throw err;
-                                                            }
-                                                            console.log(`Здесь должно быть ари стоп (0.2)`);
-                                                            ari.stop();
-                                                        });
-                                                        console.log(`Здесь должно быть ари стоп (3)`);
-                                                        ari.stop();
-                                                    }, 300);
-                                                },
-                                                () => {
-                                                    console.log(`Повторите свой ответ (2)  - channelId: ${channel.id}`);
-                                                    // try recording
-                                                });
-                                        }, 500);
-                                    })
-                                },
-                                () => {
-                                    console.log(`Повторите свой ответ (1)  - channelId: ${channel.id}`);
-                                    // try recording
+                                })
+                                .catch(err => {
+                                    // console.log(2, err);
                                 });
-                        }, 500);
-                    }, 100);
-                }, 100);
-            }, 300);
-        }, 1000);
+                        }
+                    );
+                })
+                .catch(err => {
+                    // console.log(3, err);
+                });
 
-    }
+        }
 
+        function sayGreetingAndAskQuestionMeeting(callback) {
+            // play(sounds.hello, null, () => {
+            //     play(`number:${hours}`, null, () => {
+            //         play(`number:${minutes}`, null, () => {
+            //             play(sounds.question, null, () => {
+            //                 if (callback) {
+            //                     callback(null);
+            //                 }
+            //             }, 100);
+            //         }, 100);
+            //     }, 300);
+            // }, 1000);
+
+            // SHORT
+            // return play(sounds.question, null, 1000)
+            //     // .then(() => play(`number:${hours}`, null, 300))
+            //     // .then(() => play(`number:${minutes}`, null, 100))
+            //     // .then(() => play(sounds.question, null, 100))
+            //     .catch(err => {
+            //         // console.log(4, err);
+            //     });
+
+            return play(sounds.hello, null, 1000)
+                .then(() => play(`number:${hours}`, null, 300))
+                .then(() => play(`number:${minutes}`, null, 100))
+                .then(() => play(sounds.question, null, 100))
+                .catch(err => {
+                    // console.log(4, err);
+                });
+        }
+
+        function askQuestionOperator() {
+            return play(sounds.operator, null, 500);
+
+            // play(sounds.operator, null, () => {
+            //     if (callback) {
+            //         callback(null);
+            //     }
+            // }, 500);
+        }
+
+        function tryGetAnswer(callbackTrue, callbackFalse) {
+            if (!callbackTrue || !callbackFalse) {
+                throw new Error('Отсутствуют необходимые параметры');
+            }
+            recordingVoice(true, null, 500)
+                .then((recording) => {
+                    recordingToTextToBool(recording)
+                        .then(result => {
+                            if (result === true) {
+                                callbackTrue(null);
+                            } else if (result === false) {
+                                callbackFalse(null);
+                            } else {
+                                console.log(`Повторите еще раз свой ответ - channelId: ${channel.id}`);
+                                play('sound:confbridge-pin-bad', null, 100)
+                                    .then(() => tryGetAnswer(callbackTrue, callbackFalse))
+                                    .catch(err => {
+                                        // console.log(5, err);
+                                    });
+
+                                // play('sound:confbridge-pin-bad', null, () => {
+                                //     tryGetAnswer(callbackTrue, callbackFalse);
+                                // }, 100);
+                            }
+                        })
+                        .catch(err => {
+                            // console.log(6, err);
+                        });
+                })
+                .catch(err => {
+                    // console.log(7, err);
+                });
+            // recordingVoice(true, null, (recording) => {
+            //     recordingToTextToBool(
+            //         recording,
+            //         result => {
+            //             if (result === true) {
+            //                 if (callbackTrue) {
+            //                     callbackTrue(null);
+            //                 }
+            //             } else if (result === false) {
+            //                 if (callbackFalse) {
+            //                     callbackFalse(null);
+            //                 }
+            //             } else {
+            //                 console.log(`Повторите еще раз свой ответ - channelId: ${channel.id}`);
+            //                 play('sound:confbridge-pin-bad', null, 100)
+            //                     .then(() => tryGetAnswer(callbackTrue, callbackFalse));
+            //
+            //                 // play('sound:confbridge-pin-bad', null, () => {
+            //                 //     tryGetAnswer(callbackTrue, callbackFalse);
+            //                 // }, 100);
+            //             }
+            //         });
+            // }, 500);
+        }
+
+        function endingCall() {
+            returnResult();
+            play('sound:goodbye', null, 300)
+                .then(() => ari.channels.get({channelId: channel.id})
+                    .then(channel => channel.hangup()
+                        .then(() => console.log(`Здесь программа положила трубку`))
+                        .catch(err => {
+                            // console.log(8, err);
+                        }).catch(err => {
+                            // console.log(9, err);
+                        })
+                    )).catch(err => {
+                // console.log(10, err);
+            });
+            // play('sound:goodbye', null, () => {
+            //     console.log(`Программа заканчивает разговор - channelId: ${channel.id}`);
+            //     ari.channels.get({channelId: channel.id})
+            //         .then(channel => channel.hangup((err) => {
+            //             if (err) {
+            //                 // throw err;
+            //             }
+            //             console.log(`Здесь программа положила трубку`);
+            //         }));
+            // }, 300);
+        }
+
+        function transferToOperator() {
+            returnResult();
+            console.log(`Перевод на оператора - channelId: ${channel.id}`);
+
+            play('sound:hello-world', null, 300)
+                .then(() => {
+                    console.log(`Типа ответил оператор - channelId: ${channel.id}`);
+                    ari.channels.get({channelId: channel.id})
+                        .then(channel => channel.hangup()
+                            .then(() => console.log(`Здесь программа положила трубку`))
+                            .catch(err => {
+                                // console.log(11, err);
+                            })
+                        ).catch(err => {
+                        // console.log(12, err);
+                    });
+                }).catch(err => {
+                // console.log(13, err);
+            });
+
+            // play('sound:hello-world', null, () => {
+            //     console.log(`Типа ответил оператор - channelId: ${channel.id}`);
+            //     ari.channels.get({channelId: channel.id})
+            //         .then(channel => channel.hangup((err) => {
+            //             if (err) {
+            //                 // throw err;
+            //             }
+            //             console.log(`Здесь программа положила трубку`);
+            //         }));
+            //
+            // }, 300)
+        }
+
+        function returnResult() {
+            if (!isReturnedResult) {
+                isReturnedResult = true;
+                resolve({result, operator});
+            }
+        }
+    });
 }
 
 function getRandomInt(min, max) {
@@ -226,4 +410,4 @@ function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min)) + min; //Максимум не включается, минимум включается
 }
 
-module.exports = callTo;
+module.exports = {connect, callTo};
