@@ -1,4 +1,4 @@
 module.exports = {
-    hostname: '10.0.0.21',
-    port: process.env.PORT_AUTODIALLING || 3000,
+    hostname: process.env.SERVER_HOST || '10.0.0.21',
+    port: process.env.SERVER_PORT || 3000,
 };

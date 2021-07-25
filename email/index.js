@@ -1,17 +1,18 @@
 const nodemailer = require('nodemailer');
+const emailConfig = require('../config/email.config');
 
 const transporter = nodemailer.createTransport(
     {
-        host: process.env.EMAIL_TRANSPORTER_HOST,
-        port: process.env.EMAIL_TRANSPORTER_PORT,
-        secure: Boolean(process.env.EMAIL_TRANSPORTER_SECURE),
+        host: emailConfig.host,
+        port: emailConfig.port,
+        secure: emailConfig.secure,
         auth: {
-            user: process.env.EMAIL_TRANSPORTER_USER,
-            pass: process.env.EMAIL_TRANSPORTER_PASSWORD,
+            user: emailConfig.user,
+            pass: emailConfig.pass,
         },
     },
     {
-        from: `Tester <${process.env.EMAIL_TRANSPORTER_USER}>`
+        from: `${emailConfig.name} <${emailConfig.user}>`
     }
 );
 
