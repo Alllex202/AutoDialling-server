@@ -1,6 +1,9 @@
 # dependencies
 /node_modules
 
+# variables
+.env
+
 # IDEs and editors
 /.idea
 .project
