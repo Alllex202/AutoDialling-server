@@ -1,20 +1,45 @@
+require('dotenv').config();
+
 const express = require('express');
-const path = require('path');
 const {hostname, port} = require('./config/server.config');
 const voip = require('./voip');
-// const {VoIP} = require('./voip/class')
+const db = require('./models');
+const routes = require('./routes');
 
-// const voip = new VoIP(voipConfig);
-// voip.connect()
-//     .then(() => {
-//         console.log('connect Asterisk');
-//         startServer();
-//     })
+db.sequelize.sync({logging: false})
+    .then(() => console.log('Done database sync'))
+    .catch(err => {
+        console.log('Ошибка синхронизации базы данных');
+        console.log(err);
+    });
 
-startServer();
+voip.connect()
+    .then(() => {
+        console.log('Done connect Asterisk');
+        startServer();
+    })
+    .catch(err => {
+        console.log('Ошибка подключения к Asterisk');
+        console.log(err);
+    });
 
 function startServer() {
     const app = express();
+
+    routes(app);
+
+    connectSounds(app);
+
+    app.listen(port, hostname, () => {
+        console.log(`Порт ${port} прослушивается...`);
+
+        const nums = ['PJSIP/1010', 'PJSIP/2020'];
+        calling(nums)
+
+    });
+}
+
+function connectSounds(app) {
 
     app.get('/1', (req, res) => {
         res.download(`${__dirname}/sounds/alaw.wav`, '1.wav');
@@ -65,31 +90,16 @@ function startServer() {
     });
 
 
-    app.listen(port, hostname, () => {
-        console.log(`http://${hostname}:${port} прослушивается...`);
-
-        // voip
-        //     .connect()
-        //     .then(ari => {
-        //         const nums = [
-        //             'PJSIP/1010',
-        //             'PJSIP/1010',
-        //             'PJSIP/1010',
-        //         ];
-        //         calling(nums)
-        //             .then(() => {
-        //                 console.log('ENDed calling ');
-        //             });
-        //     });
-    });
 }
 
-// async function calling(nums) {
-//     for (let num of nums) {
-//         await voip
-//             .callTo(num, 12, 50)
-//             .then(res => {
-//                 console.log(`RESULT:`, res);
-//             });
-//     }
-// }
+function calling(nums) {
+    // const results = [];
+    for (let num of nums) {
+        voip
+            .callTo(num, 12, 50)
+            .then(res => {
+                console.log(`RESULT:`, res);
+            });
+    }
+    // return results;
+}

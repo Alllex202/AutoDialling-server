@@ -1,13 +1,31 @@
 const voip = require('../voip');
 
-async function callingOnList(list) {
+module.exports.startCalling = (req, res) => {
+    // todo
+};
+
+/**
+ *
+ * @param list {{phoneNumber: string, hours: number, minutes: number}[]}
+ */
+function callingOnList(list) {
     for (let el of list) {
-        await voip
-            .callTo(num, 12, 50)
-            .then(res => {
-                // Запись в БД
-            });
+        call(el.phoneNumber, el.hours, el.minutes)
     }
 }
 
-module.exports.callingOnList = callingOnList;
+/**
+ *
+ * @param phoneNumber {string}
+ * @param hours {number}
+ * @param minutes {number}
+ * @param callback {null | function}
+ */
+function call(phoneNumber, hours, minutes, callback = null) {
+    voip
+        .callTo(phoneNumber, hours, minutes)
+        .then(res => {
+            console.log(`RESULT:`, res);
+            callback && callback(res);
+        });
+}

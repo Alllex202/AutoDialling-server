@@ -3,5 +3,6 @@ module.exports = {
     user: process.env.ASTERISK_USER || 'test',
     password: process.env.ASTERISK_PASSWORD || 'test',
     appName: process.env.ASTERISK_APPNAME || 'AutoDialling',
-    callerName: process.env.ASTERISK_CALLERNAME || 'МФЦ',
+    callerName: process.env.ASTERISK_CALLERNAME || 'TESTER',
+    callLimit: 2,
 };

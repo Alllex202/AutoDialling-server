@@ -1,12 +1,13 @@
-// 'use strict';
-
 const client = require('ari-client');
 const voipConfig = require('../config/voip.config');
 const sounds = require('./sounds');
 const {speechToTextFromBinaryToBool} = require('../speechToText');
+const {Queue} = require('../queue');
 
-const app = "AutoDialling";
-const callerName = 'МФЦ';
+const app = voipConfig.appName;
+const callerName = voipConfig.callerName;
+
+const queue = new Queue(voipConfig.callLimit);
 
 let ari;
 
@@ -21,14 +22,17 @@ async function connect() {
         .connect(voipConfig.host, voipConfig.user, voipConfig.password);
     await ari.start(app);
     return ari;
-    // .then(_ari => {
-    //     ari = _ari;
-    //     ari.start(app);
-    //     return ari;
-    // })
-    // .catch(err => {
-    //     throw err;
-    // });
+}
+
+/**
+ *
+ * @param number {string}
+ * @param hours {number}
+ * @param minutes {number}
+ * @returns {Promise<*|undefined>}
+ */
+async function callTo(number, hours = 10, minutes = 50) {
+    return queue.enqueue(() => _call(number, hours = 10, minutes = 50));
 }
 
 /**
@@ -38,7 +42,7 @@ async function connect() {
  * @param minutes {number}
  * @returns {Promise<{result: boolean | null, operator: boolean | null}>}
  */
-function callTo(number, hours = 10, minutes = 50) {
+async function _call(number, hours = 10, minutes = 50) {
     return new Promise((resolve, reject) => {
         let result = null;
         let operator = null;
