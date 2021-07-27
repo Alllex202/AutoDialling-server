@@ -4,5 +4,7 @@ module.exports = {
     password: process.env.ASTERISK_PASSWORD || 'test',
     appName: process.env.ASTERISK_APPNAME || 'AutoDialling',
     callerName: process.env.ASTERISK_CALLERNAME || 'TESTER',
-    callLimit: 2,
+    concurrentCallLimit: 2,
+    attemptedCalls: 3,
+    delaysBetweenCallsSec: 30,
 };

@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "createdb": "node settings\\dbCreate.js"
+    "createdb": "node settings/dbCreate.js"
   },
   "author": "",
   "license": "ISC",
@@ -17,6 +17,7 @@
     "express": "^4.17.1",
     "ibm-watson": "^6.1.1",
     "mysql2": "^2.2.5",
+    "node-fetch": "^2.6.1",
     "nodemailer": "^6.6.3",
     "sequelize": "^6.6.5"
   },

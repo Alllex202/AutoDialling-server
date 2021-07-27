@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport(
 );
 
 transporter.sendMail({
-    to: 'fake-0000001@yandex.ru',
+    to: process.env.EMAIL_EXPORT_TO,
     subject: 'Тестовое письмо',
     // text: 'Текст письма',
     html: 'Разметка для письма',

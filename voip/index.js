@@ -7,7 +7,7 @@ const {Queue} = require('../queue');
 const app = voipConfig.appName;
 const callerName = voipConfig.callerName;
 
-const queue = new Queue(voipConfig.callLimit);
+const queue = new Queue(voipConfig.concurrentCallLimit);
 
 let ari;
 

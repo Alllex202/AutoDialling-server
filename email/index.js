@@ -19,7 +19,7 @@ const transporter = nodemailer.createTransport(
 /**
  *
  * @param mail {{to: string, subject: string, context: string | html, files: [{filename: string, path: string, content: string | ReadableStream}]}}
- * @returns {Promise<((promiseImpl?: PromiseConstructor) => Connection)|((promiseImpl?: PromiseConstructor) => PoolConnection)|((promiseImpl?: PromiseConstructor) => Pool)|(() => Promise<any>)|any>}
+ * @returns {Promise<>}
  */
 async function sendMail(mail) {
     return transporter.sendMail({

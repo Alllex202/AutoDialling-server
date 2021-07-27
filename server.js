@@ -33,8 +33,8 @@ function startServer() {
     app.listen(port, hostname, () => {
         console.log(`Порт ${port} прослушивается...`);
 
-        const nums = ['PJSIP/1010', 'PJSIP/2020'];
-        calling(nums)
+        // const nums = ['PJSIP/1010', 'PJSIP/2020'];
+        // calling(nums)
 
     });
 }
@@ -89,17 +89,20 @@ function connectSounds(app) {
         res.download(`${__dirname}/sounds/hello.wav`, 'hello.wav');
     });
 
+    app.get('/table', (req, res) => {
+        res.download(`${__dirname}/../files/tester.xlsx`);
+    });
 
 }
 
-function calling(nums) {
-    // const results = [];
-    for (let num of nums) {
-        voip
-            .callTo(num, 12, 50)
-            .then(res => {
-                console.log(`RESULT:`, res);
-            });
-    }
-    // return results;
-}
+// function calling(nums) {
+//     // const results = [];
+//     for (let num of nums) {
+//         voip
+//             .callTo(num, 12, 50)
+//             .then(res => {
+//                 console.log(`RESULT:`, res);
+//             });
+//     }
+//     // return results;
+// }

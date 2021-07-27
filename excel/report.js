@@ -29,35 +29,40 @@ const columnsDetailedInfo = [
     {header: 'Соединение с оператором', key: 'operatorConnection', width: 10},
 ];
 
-function exportTableReportFromDB(fromDate, toDate) {
-    Entry
-        .findAll({
-            include: [{
-                model: Call,
-                attributes: [
-                    'callsCount',
-                    'result',
-                    'operatorConnection',
-                ],
-            }],
-            where: {
-                datetime: {
-                    [Op.gte]: fromDate,
-                    [Op.lte]: toDate,
+function exportTableReportFromDB(fromDate, toDate, pathFile) {
+    return new Promise((resolve, reject) => {
+        Entry
+            .findAll({
+                include: [{
+                    model: Call,
+                    attributes: [
+                        'callsCount',
+                        'result',
+                        'operatorConnection',
+                    ],
+                }],
+                where: {
+                    datetime: {
+                        [Op.gte]: fromDate,
+                        [Op.lte]: toDate,
+                    }
+                },
+                logging: false,
+            })
+            .then(entries => {
+                try {
+                    exportWorkbook(createReport(entries), pathFile);
+                    resolve(pathFile);
+                } catch (e) {
+                    console.log('Error getTableReportFromDB!', e);
+                    reject(e);
                 }
-            },
-        })
-        .then(entries => {
-            try {
-                exportWorkbook(createReport(entries), 'export.xlsx');
-            } catch (e) {
-                console.log('Error getTableReportFromDB!');
-                console.log(e);
-            }
-        })
-        .catch(err => {
-            console.log(`ERROR getting results for report: ${err}`);
-        });
+            })
+            .catch(err => {
+                reject(err);
+                console.log(`ERROR getting results for report: ${err}`);
+            });
+    });
 
     function createReport(entries) {
         const wb = new Excel.Workbook();
@@ -78,15 +83,13 @@ function exportTableReportFromDB(fromDate, toDate) {
         return wb;
     }
 
-    function exportWorkbook(wb, pathFile) {
-        wb.xlsx.writeFile(pathFile)
-            .then(() => {
-                console.log('Export SUCCESS!');
-            })
-            .catch(err => {
-                console.log('Export ERROR!');
-                console.log(err);
-            })
+    async function exportWorkbook(wb, pathFile) {
+        try {
+            await wb.xlsx.writeFile(pathFile);
+        } catch (err) {
+            console.log('Export ERROR!');
+            console.log(err);
+        }
     }
 
     function addRowReport(ws, entry) {
@@ -170,4 +173,4 @@ function autoWidth(worksheet, minimalWidth = 10) {
 //         console.log(`Ошибка при синхронизации БД; ${err}`);
 //     });
 
-module.exports = exportTableReportFromDB;
+module.exports.exportTableReportFromDB = exportTableReportFromDB;
