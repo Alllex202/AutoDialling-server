@@ -5,7 +5,7 @@ const voip = require('../voip');
 const {attemptedCalls, delaysBetweenCallsSec} = require('../config/voip.config');
 const {parseTableToDB, exportTableReportFromDB} = require('../excel');
 const {sendMail} = require('../email');
-const {calls: Call, entries: Entry, Sequelize} = require('../models');
+const {Call: Call, Entry: Entry, Sequelize} = require('../models');
 const {Op} = Sequelize;
 
 module.exports.startCalling = (req, res) => {
@@ -22,7 +22,6 @@ module.exports.startCalling = (req, res) => {
 
     getTable()
         .then(res => {
-            console.log('response', res);
             return downloadFile(res);
         })
         .then(filename => {
@@ -30,13 +29,13 @@ module.exports.startCalling = (req, res) => {
             filenameImport = filename;
             return parseTableToDB(path.join(__dirname, '..', '..', 'files', filename));
         })
-        .then(() => {
+        .then((requestId) => {
             console.log('Parse DONE');
-            return callingOnList(fromDate, toDate);
+            return callingOnRequest(requestId);
         })
-        .then(() => {
+        .then((requestId) => {
             console.log('Calling DONE!');
-            return exportTableReportFromDB(fromDate, toDate,
+            return exportTableReportFromDB(requestId,
                 path.join(__dirname, '..', '..', 'files', `${filenameImport.split('.')[0]}-export.xlsx`));
         })
         .then(pathFileExport => {
@@ -100,10 +99,17 @@ function getTable(startDate, endDate, term = '', lineId = 10125, shopId = 7) {
     });
 }
 
-async function callingOnList(fromDate, toDate) {
+/**
+ *
+ * @param {number} requestId
+ * @returns {Promise<number>} requestId
+ */
+async function callingOnRequest(requestId) {
     return new Promise((resolve, reject) => {
-        console.log('callingOnList');
+        console.log('callingOnRequest');
+
         let answersCount = 0;
+
         Entry
             .findAll({
                 include: [{
@@ -126,10 +132,7 @@ async function callingOnList(fromDate, toDate) {
                     'deleted',
                 ],
                 where: {
-                    datetime: {
-                        [Op.gte]: fromDate,
-                        [Op.lte]: toDate,
-                    },
+                    requestId: requestId,
                 },
                 logging: false,
             })
@@ -137,7 +140,7 @@ async function callingOnList(fromDate, toDate) {
                 console.log('Сделал поиск')
                 if (entries.length === 0) {
                     console.log('Length 0')
-                    resolve();
+                    resolve(requestId);
                     // callback();
                     return;
                 }
@@ -175,14 +178,14 @@ async function callingOnList(fromDate, toDate) {
 
                                         if (entries.length === answersCount) {
                                             console.log('Колчичество в списке совпадает с количеством ответов');
-                                            resolve();
+                                            resolve(requestId);
                                         } else {
                                             console.log('Через N секунд запустим обзвон повторно');
                                             setTimeout(() => {
                                                 console.log('Запускаем обзвон снова');
-                                                callingOnList(fromDate, toDate)
-                                                    .then(() => {
-                                                        resolve();
+                                                callingOnRequest(requestId)
+                                                    .then((requestId) => {
+                                                        resolve(requestId);
                                                     })
                                                     .catch(err => {
                                                         reject(err);

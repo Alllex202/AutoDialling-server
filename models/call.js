@@ -14,11 +14,8 @@ module.exports = (Sequelize, sequelize) => {
         result: {
             type: Sequelize.BOOLEAN,
         },
-        lastTime: {
-            type: Sequelize.DATE,
-        },
         operatorConnection: {
             type: Sequelize.BOOLEAN,
-        }
+        },
     });
 };

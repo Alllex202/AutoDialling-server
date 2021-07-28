@@ -1,6 +1,6 @@
 const Excel = require('exceljs');
 const path = require('path');
-const {Sequelize, sequelize, calls: Call, entries: Entry} = require('../models');
+const {Sequelize, sequelize, Call: Call, Entry: Entry} = require('../models');
 const {Op} = Sequelize;
 
 const columnsReport = [
@@ -29,7 +29,13 @@ const columnsDetailedInfo = [
     {header: 'Соединение с оператором', key: 'operatorConnection', width: 10},
 ];
 
-function exportTableReportFromDB(fromDate, toDate, pathFile) {
+/**
+ *
+ * @param requestId
+ * @param pathFile
+ * @returns {Promise<string>} pathFile
+ */
+function exportTableReportFromDB(requestId, pathFile) {
     return new Promise((resolve, reject) => {
         Entry
             .findAll({
@@ -42,10 +48,7 @@ function exportTableReportFromDB(fromDate, toDate, pathFile) {
                     ],
                 }],
                 where: {
-                    datetime: {
-                        [Op.gte]: fromDate,
-                        [Op.lte]: toDate,
-                    }
+                    requestId: requestId,
                 },
                 logging: false,
             })
@@ -162,15 +165,5 @@ function autoWidth(worksheet, minimalWidth = 10) {
         column.width = maxColumnLength + 2;
     });
 }
-
-// sequelize
-//     .sync()
-//     .then(() => {
-//         console.log('Good sync');
-//         exportTableReportFromDB(new Date('2021-06-30 00:00:00'), new Date('2021-06-30 23:59:59'));
-//     })
-//     .catch(err => {
-//         console.log(`Ошибка при синхронизации БД; ${err}`);
-//     });
 
 module.exports.exportTableReportFromDB = exportTableReportFromDB;
