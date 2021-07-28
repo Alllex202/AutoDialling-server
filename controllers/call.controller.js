@@ -5,7 +5,7 @@ const voip = require('../voip');
 const {attemptedCalls, delaysBetweenCallsSec} = require('../config/voip.config');
 const {parseTableToDB, exportTableReportFromDB} = require('../excel');
 const {sendMail} = require('../email');
-const {Call: Call, Entry: Entry, Sequelize} = require('../models');
+const {Call, Entry, Sequelize} = require('../models');
 const {Op} = Sequelize;
 
 module.exports.startCalling = (req, res) => {

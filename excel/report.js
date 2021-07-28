@@ -1,6 +1,6 @@
 const Excel = require('exceljs');
 const path = require('path');
-const {Sequelize, sequelize, Call: Call, Entry: Entry} = require('../models');
+const {Sequelize, sequelize, Call, Entry} = require('../models');
 const {Op} = Sequelize;
 
 const columnsReport = [
