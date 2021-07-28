@@ -16,30 +16,24 @@ db.sequelize.sync({logging: false})
 voip.connect()
     .then(() => {
         console.log('Done connect Asterisk');
-        startServer();
     })
     .catch(err => {
         console.log('Ошибка подключения к Asterisk');
         console.log(err);
     });
 
-function startServer() {
-    const app = express();
 
-    routes(app);
+const app = express();
 
-    connectSounds(app);
+routes(app);
 
-    app.listen(port, hostname, () => {
-        console.log(`Порт ${port} прослушивается...`);
+routesSounds(app);
 
-        // const nums = ['PJSIP/1010', 'PJSIP/2020'];
-        // calling(nums)
+app.listen(port, hostname, () => {
+    console.log(`Порт ${port} прослушивается...`);
+});
 
-    });
-}
-
-function connectSounds(app) {
+function routesSounds(app) {
 
     app.get('/1', (req, res) => {
         res.download(`${__dirname}/sounds/alaw.wav`, '1.wav');
@@ -94,15 +88,3 @@ function connectSounds(app) {
     });
 
 }
-
-// function calling(nums) {
-//     // const results = [];
-//     for (let num of nums) {
-//         voip
-//             .callTo(num, 12, 50)
-//             .then(res => {
-//                 console.log(`RESULT:`, res);
-//             });
-//     }
-//     // return results;
-// }

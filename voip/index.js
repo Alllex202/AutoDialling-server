@@ -3,6 +3,7 @@ const voipConfig = require('../config/voip.config');
 const sounds = require('./sounds');
 const {speechToTextFromBinaryToBool} = require('../speechToText');
 const {Queue} = require('../queue');
+const {getRandomInt} = require('../shared');
 
 const app = voipConfig.appName;
 const callerName = voipConfig.callerName;
@@ -10,8 +11,6 @@ const callerName = voipConfig.callerName;
 const queue = new Queue(voipConfig.concurrentCallLimit);
 
 let ari;
-
-// connect()
 
 /**
  *
@@ -111,6 +110,7 @@ async function _call(number, hours = 10, minutes = 50) {
                     channel.play({media: sound}, function (err, playback) {
                         if (err) {
                             reject1(err);
+                            return;
                         }
                         if (!playback) {
                             // reject1();
@@ -151,6 +151,7 @@ async function _call(number, hours = 10, minutes = 50) {
                     }, (err, liveRecording) => {
                         if (err) {
                             reject1(err);
+                            return;
                             // throw err;
                         }
                         if (!liveRecording) {
@@ -167,10 +168,6 @@ async function _call(number, hours = 10, minutes = 50) {
                         liveRecording.on('RecordingFinished', (event, recording) => {
                             console.log(`Окончание записи ответа - channel id: ${channel.id}, recordName: ${recording.name}`);
                             resolve1(recording);
-
-                            // if (callbackFinished) {
-                            //     callbackFinished(recording);
-                            // }
                         });
                     });
                 }, delay);
@@ -191,10 +188,6 @@ async function _call(number, hours = 10, minutes = 50) {
                             .then(result => {
                                 console.log(`Мы распознали речь - recordName: ${recording.name}, result: ${result}`);
                                 resolve1(result);
-
-                                // if (callback) {
-                                //     callback(result);
-                                // }
                             })
                             .catch(err => {
                                 // console.log(1, err)
@@ -242,19 +235,7 @@ async function _call(number, hours = 10, minutes = 50) {
 
         }
 
-        function sayGreetingAndAskQuestionMeeting(callback) {
-            // play(sounds.hello, null, () => {
-            //     play(`number:${hours}`, null, () => {
-            //         play(`number:${minutes}`, null, () => {
-            //             play(sounds.question, null, () => {
-            //                 if (callback) {
-            //                     callback(null);
-            //                 }
-            //             }, 100);
-            //         }, 100);
-            //     }, 300);
-            // }, 1000);
-
+        function sayGreetingAndAskQuestionMeeting() {
             // SHORT
             // return play(sounds.question, null, 1000)
             //     // .then(() => play(`number:${hours}`, null, 300))
@@ -275,12 +256,6 @@ async function _call(number, hours = 10, minutes = 50) {
 
         function askQuestionOperator() {
             return play(sounds.operator, null, 500);
-
-            // play(sounds.operator, null, () => {
-            //     if (callback) {
-            //         callback(null);
-            //     }
-            // }, 500);
         }
 
         function tryGetAnswer(callbackTrue, callbackFalse) {
@@ -302,10 +277,6 @@ async function _call(number, hours = 10, minutes = 50) {
                                     .catch(err => {
                                         // console.log(5, err);
                                     });
-
-                                // play('sound:confbridge-pin-bad', null, () => {
-                                //     tryGetAnswer(callbackTrue, callbackFalse);
-                                // }, 100);
                             }
                         })
                         .catch(err => {
@@ -315,29 +286,6 @@ async function _call(number, hours = 10, minutes = 50) {
                 .catch(err => {
                     // console.log(7, err);
                 });
-            // recordingVoice(true, null, (recording) => {
-            //     recordingToTextToBool(
-            //         recording,
-            //         result => {
-            //             if (result === true) {
-            //                 if (callbackTrue) {
-            //                     callbackTrue(null);
-            //                 }
-            //             } else if (result === false) {
-            //                 if (callbackFalse) {
-            //                     callbackFalse(null);
-            //                 }
-            //             } else {
-            //                 console.log(`Повторите еще раз свой ответ - channelId: ${channel.id}`);
-            //                 play('sound:confbridge-pin-bad', null, 100)
-            //                     .then(() => tryGetAnswer(callbackTrue, callbackFalse));
-            //
-            //                 // play('sound:confbridge-pin-bad', null, () => {
-            //                 //     tryGetAnswer(callbackTrue, callbackFalse);
-            //                 // }, 100);
-            //             }
-            //         });
-            // }, 500);
         }
 
         function endingCall() {
@@ -354,16 +302,6 @@ async function _call(number, hours = 10, minutes = 50) {
                     )).catch(err => {
                 // console.log(10, err);
             });
-            // play('sound:goodbye', null, () => {
-            //     console.log(`Программа заканчивает разговор - channelId: ${channel.id}`);
-            //     ari.channels.get({channelId: channel.id})
-            //         .then(channel => channel.hangup((err) => {
-            //             if (err) {
-            //                 // throw err;
-            //             }
-            //             console.log(`Здесь программа положила трубку`);
-            //         }));
-            // }, 300);
         }
 
         function transferToOperator() {
@@ -385,18 +323,6 @@ async function _call(number, hours = 10, minutes = 50) {
                 }).catch(err => {
                 // console.log(13, err);
             });
-
-            // play('sound:hello-world', null, () => {
-            //     console.log(`Типа ответил оператор - channelId: ${channel.id}`);
-            //     ari.channels.get({channelId: channel.id})
-            //         .then(channel => channel.hangup((err) => {
-            //             if (err) {
-            //                 // throw err;
-            //             }
-            //             console.log(`Здесь программа положила трубку`);
-            //         }));
-            //
-            // }, 300)
         }
 
         function returnResult() {
@@ -406,12 +332,6 @@ async function _call(number, hours = 10, minutes = 50) {
             }
         }
     });
-}
-
-function getRandomInt(min, max) {
-    min = Math.ceil(min);
-    max = Math.floor(max);
-    return Math.floor(Math.random() * (max - min)) + min; //Максимум не включается, минимум включается
 }
 
 module.exports = {connect, callTo};

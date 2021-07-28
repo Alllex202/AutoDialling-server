@@ -3,8 +3,7 @@ const fs = require('fs');
 const path = require("path");
 const voip = require('../voip');
 const {attemptedCalls, delaysBetweenCallsSec} = require('../config/voip.config');
-const {parseTableToDB} = require('../excel/parser');
-const {exportTableReportFromDB} = require('../excel/report');
+const {parseTableToDB, exportTableReportFromDB} = require('../excel');
 const {sendMail} = require('../email');
 const {calls: Call, entries: Entry, Sequelize} = require('../models');
 const {Op} = Sequelize;
@@ -212,18 +211,18 @@ async function callingOnList(fromDate, toDate) {
     });
 }
 
-/**
- *
- * @param phoneNumber {string}
- * @param hours {number}
- * @param minutes {number}
- * @param callback {null | function}
- */
-function call(phoneNumber, hours, minutes, callback = null) {
-    voip
-        .callTo(phoneNumber, hours, minutes)
-        .then(res => {
-            console.log(`RESULT:`, res);
-            callback && callback(res);
-        });
-}
+// /**
+//  *
+//  * @param phoneNumber {string}
+//  * @param hours {number}
+//  * @param minutes {number}
+//  * @param callback {null | function}
+//  */
+// function call(phoneNumber, hours, minutes, callback = null) {
+//     voip
+//         .callTo(phoneNumber, hours, minutes)
+//         .then(res => {
+//             console.log(`RESULT:`, res);
+//             callback && callback(res);
+//         });
+// }
