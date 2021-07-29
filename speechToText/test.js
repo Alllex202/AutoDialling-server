@@ -5,9 +5,9 @@ const fs = require('fs');
 
 const speechToText = new SpeechToTextV1({
     authenticator: new IamAuthenticator({
-        apikey: '8qHBUV5dhxNd7Q4bNHqP5NKP-NOE_lxj3OvQ-bdxdyX-',
+        apikey: process.env.SPEECH_TO_TEXT_APIKEY,
     }),
-    serviceUrl: 'https://api.eu-gb.speech-to-text.watson.cloud.ibm.com/instances/9f889f5e-08b2-4df0-a27b-264989a4ee92',
+    serviceUrl: process.env.SPEECH_TO_TEXT_SERVER_URL,
 });
 
 // speechToText.listModels()

@@ -33,7 +33,7 @@ app.listen(port, hostname, () => {
     console.log(`Порт ${port} прослушивается...`);
 });
 
-function routesSounds(app) {
+function routesFiles(app) {
 
     app.get('/1', (req, res) => {
         res.download(`${__dirname}/sounds/alaw.wav`, '1.wav');
