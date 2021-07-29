@@ -17,10 +17,23 @@ let ari;
  * @returns {Promise<ari>}
  */
 async function connect() {
-    ari = await client
-        .connect(voipConfig.host, voipConfig.user, voipConfig.password);
-    await ari.start(app);
-    return ari;
+    return client
+        .connect(voipConfig.host, voipConfig.user, voipConfig.password)
+        .then(_ari => {
+            ari = _ari;
+            ari.start(app)
+        })
+        .catch(err => {
+            throw err;
+        });
+    // try{
+    //     ari = await client
+    //         .connect(voipConfig.host, voipConfig.user, voipConfig.password);
+    //     await ari.start(app);
+    //     return ari;
+    // } catch (e) {
+    //     return e;
+    // }
 }
 
 /**

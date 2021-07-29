@@ -1,13 +1,13 @@
-'use strict';
 const SpeechToTextV1 = require('ibm-watson/speech-to-text/v1');
 const { IamAuthenticator } = require('ibm-watson/auth');
 const fs = require('fs');
+const {watsonStudio} = require('../config/speechToText.config');
 
 const speechToText = new SpeechToTextV1({
     authenticator: new IamAuthenticator({
-        apikey: process.env.SPEECH_TO_TEXT_APIKEY,
+        apikey: watsonStudio.apikey,
     }),
-    serviceUrl: process.env.SPEECH_TO_TEXT_SERVER_URL,
+    serviceUrl: watsonStudio.serviceUrl,
 });
 
 // speechToText.listModels()

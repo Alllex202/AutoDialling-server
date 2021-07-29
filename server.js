@@ -6,32 +6,48 @@ const voip = require('./voip');
 const db = require('./models');
 const routes = require('./routes');
 
-db.sequelize.sync({logging: false})
-    .then(() => console.log('Done database sync'))
-    .catch(err => {
-        console.log('Ошибка синхронизации базы данных');
-        console.log(err);
+run();
+
+function run() {
+    syncDB();
+}
+
+function syncDB() {
+    db.sequelize.sync({logging: false})
+        .then(() => {
+            console.log('Done database sync');
+            voipConnect();
+        })
+        .catch(err => {
+            console.log('Ошибка синхронизации базы данных');
+            console.log(err);
+        });
+}
+
+function voipConnect() {
+    voip.connect()
+        .then(() => {
+            console.log('Done connect Asterisk');
+            createServer();
+        })
+        .catch(err => {
+            console.log('Ошибка подключения к Asterisk');
+            console.log(err);
+        });
+}
+
+function createServer() {
+    const app = express();
+
+    routes(app);
+
+    routesFiles(app);
+
+    app.listen(port, hostname, () => {
+        console.log(`Порт ${port} прослушивается...`);
+        console.log('ALL DONE');
     });
-
-voip.connect()
-    .then(() => {
-        console.log('Done connect Asterisk');
-    })
-    .catch(err => {
-        console.log('Ошибка подключения к Asterisk');
-        console.log(err);
-    });
-
-
-const app = express();
-
-routes(app);
-
-routesSounds(app);
-
-app.listen(port, hostname, () => {
-    console.log(`Порт ${port} прослушивается...`);
-});
+}
 
 function routesFiles(app) {
 
